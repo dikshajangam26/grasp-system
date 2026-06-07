@@ -44,8 +44,14 @@ class VisionServoController(Node):
             self.get_logger().error(f"Image conversion failed: {e}")
             return
 
-        corners, ids, rejected = cv2.aruco.detectMarkers(cv_image, self.aruco_dict, parameters=self.aruco_params)
-        height, width, _ = cv_image.shape
+        if hasattr(cv2.aruco, 'ArucoDetector'):
+            # Newer OpenCV 4.7+ syntax (Used by GitHub Actions/Pip)
+            detector = cv2.aruco.ArucoDetector(self.aruco_dict, self.aruco_params)
+            corners, ids, rejected = detector.detectMarkers(cv_image)
+        else:
+            # Older OpenCV 4.5 syntax (Used by Ubuntu 22.04/Apt)
+            corners, ids, rejected = cv2.aruco.detectMarkers(cv_image, self.aruco_dict, parameters=self.aruco_params)        height, width, _ = cv_image.shape
+        
         desired_x = width / 2.0
         desired_y = height / 2.0
         

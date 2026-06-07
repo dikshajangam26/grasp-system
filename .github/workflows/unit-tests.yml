@@ -29,6 +29,7 @@ jobs:
           pip install pytest pytest-cov
 
       - name: Run Tests and Report Coverage
-        # Source the ROS 2 environment, then run pytest on your tests directory
         run: |
-          bash -c "source /opt/ros/humble/setup.bash && pytest ros2_ws/src/grasp_system/tests/ --cov=ros2_ws/src/grasp_system/grasp_system"
+          bash -c "source /opt/ros/humble/setup.bash && export PYTHONPATH=$PWD/ros2_ws/src/grasp_system:\$PYTHONPATH && pytest ros2_ws/src/grasp_system/tests/ --cov=ros2_ws/src/grasp_system/grasp_system"
+
+      

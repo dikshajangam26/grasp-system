@@ -12,6 +12,7 @@ import torchvision.models as models
 import torch.nn as nn
 from torchvision import transforms
 import os
+from grasp_system.performance_metrics import PerformanceMonitor
 
 class GraspQualityPredictor(Node):
     def __init__(self):
@@ -21,6 +22,9 @@ class GraspQualityPredictor(Node):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model_path = 'models/grasp_quality_model.pth'
         self.model = None
+        
+        # Initialize Performance Monitor
+        self.perf_monitor = PerformanceMonitor()
         
         self.preprocess = transforms.Compose([
             transforms.ToPILImage(),
@@ -32,17 +36,9 @@ class GraspQualityPredictor(Node):
         self.load_model()
         
         if self.model is not None:
-            # --- TASK 3.4 ADDITIONS ---
-            
-            # 1. Subscribe to camera images
             self.image_sub = self.create_subscription(
-                Image, 
-                '/camera/image_raw', 
-                self.image_callback, 
-                10
+                Image, '/camera/image_raw', self.image_callback, 10
             )
-            
-            # 2. Publish grasp quality scores + best grasp pose
             self.quality_pub = self.create_publisher(Float32, '/grasp/quality_score', 10)
             self.pose_pub = self.create_publisher(Pose, '/grasp/best_pose', 10)
             
@@ -69,13 +65,17 @@ class GraspQualityPredictor(Node):
 
     def predict_grasp_quality(self, cv_image):
         try:
-            rgb_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
-            input_tensor = self.preprocess(rgb_image)
-            input_batch = input_tensor.unsqueeze(0).to(self.device)
+            # Measure Preprocessing Time
+            with self.perf_monitor.time_block('grasp_preprocessing'):
+                rgb_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
+                input_tensor = self.preprocess(rgb_image)
             
-            with torch.no_grad():
-                output = self.model(input_batch)
-                probability = output.item()
+            # Measure Inference Time
+            with self.perf_monitor.time_block('grasp_inference'):
+                input_batch = input_tensor.unsqueeze(0).to(self.device)
+                with torch.no_grad():
+                    output = self.model(input_batch)
+                    probability = output.item()
             
             candidates = [
                 {"x": 320.0, "y": 240.0, "angle": 0.0, "score": probability},
@@ -88,35 +88,30 @@ class GraspQualityPredictor(Node):
             return 0.0, []
 
     def image_callback(self, msg):
-        """Task 3.4: Call predictor on each frame and publish."""
         try:
             cv_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")
         except Exception as e:
             self.get_logger().error(f"Image conversion failed: {e}")
             return
 
-        # Run inference
         score, candidates = self.predict_grasp_quality(cv_image)
         
         if not candidates:
             return
 
-        # Find the best candidate (highest score)
         best_candidate = max(candidates, key=lambda x: x['score'])
         
-        # Publish the quality score
         score_msg = Float32()
         score_msg.data = best_candidate['score']
         self.quality_pub.publish(score_msg)
         
-        # Publish the best pose (mapping pixel x,y to a mock 3D space for the IK solver later)
         pose_msg = Pose()
-        pose_msg.position.x = float(best_candidate['x']) / 1000.0  # mock conversion to meters
+        pose_msg.position.x = float(best_candidate['x']) / 1000.0
         pose_msg.position.y = float(best_candidate['y']) / 1000.0
-        pose_msg.position.z = 0.5  # Fixed height for grasp setup
+        pose_msg.position.z = 0.5
         
         self.pose_pub.publish(pose_msg)
-        self.get_logger().info(f"Published Grasp | Score: {score_msg.data:.2f} | Pose X:{pose_msg.position.x:.2f}, Y:{pose_msg.position.y:.2f}")
+        self.get_logger().info(f"Published Grasp | Score: {score_msg.data:.2f}")
 
 def main(args=None):
     rclpy.init(args=args)

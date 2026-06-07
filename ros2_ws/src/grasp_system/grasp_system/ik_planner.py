@@ -7,10 +7,14 @@ from std_msgs.msg import Float32MultiArray
 import ikpy.chain
 from ikpy.link import OriginLink, URDFLink
 import numpy as np
+from grasp_system.performance_metrics import PerformanceMonitor
 
 class InverseKinematicsSolver(Node):
     def __init__(self):
         super().__init__('ik_solver')
+        
+        # Initialize Performance Monitor
+        self.perf_monitor = PerformanceMonitor()
         
         self.arm_chain = ikpy.chain.Chain(name='6_dof_mock_arm', links=[
             OriginLink(),
@@ -31,10 +35,7 @@ class InverseKinematicsSolver(Node):
             (-2.0 * np.pi, 2.0 * np.pi)   
         ]
         
-        # --- TASK 4.4 ADDITIONS: Track current state ---
-        # Assume the robot starts completely straight up at "home" (0 radians for all joints)
         self.current_joint_angles = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
-        
         self.pose_subscriber = self.create_subscription(Pose, '/grasp/best_pose', self.pose_callback, 10)
         self.joint_publisher = self.create_publisher(Float32MultiArray, '/arm/joint_commands', 10)
         self.get_logger().info('IK Solver initialized and listening for grasp targets.')
@@ -52,81 +53,88 @@ class InverseKinematicsSolver(Node):
             
         return True
 
-    def solve_ik(self, target_position):
-        # --- NEW SAFETY CHECK: Handle invalid inputs instantly ---
+    def solve_ik(self, target_pose_input):
+        """
+        Solves Inverse Kinematics for a given target pose.
+        target_pose_input: Can be a 3-element [x, y, z] or 6-element [x, y, z, roll, pitch, yaw] list/array.
+        """
+        # 1. Correctly slice the input to ensure we only have [x, y, z]
+        target_position = target_pose_input[:3]
+        
+        # 2. Check if the sliced input is valid
         if target_position is None:
             self.get_logger().error("Invalid input: target_position is None.")
             return None
 
-        # Now it is safe to do math
+        # 3. Check workspace reachability
         distance = np.linalg.norm(target_position)
         if distance > 1.1:
             return None
 
+        # 4. Measure IK Solving Time
         try:
-            raw_angles = self.arm_chain.inverse_kinematics(
-                target_position=target_position,
-                target_orientation=[0, 0, -1],
-                orientation_mode="Z"
-            )
+            with self.perf_monitor.time_block('ik_solving'):
+                raw_angles = self.arm_chain.inverse_kinematics(
+                    target_position=target_position,
+                    target_orientation=[0, 0, -1],
+                    orientation_mode="Z"
+                )
 
-            fk_position = self.arm_chain.forward_kinematics(raw_angles)[:3, 3]
-            error = np.linalg.norm(fk_position - target_position)
+                # Validate with Forward Kinematics
+                fk_position = self.arm_chain.forward_kinematics(raw_angles)[:3, 3]
+                error = np.linalg.norm(fk_position - target_position)
 
-            if error > 0.05:
-                return None
+                if error > 0.05:
+                    return None
 
-            joint_angles = raw_angles[1:]
-            
-            if not self.validate_constraints(joint_angles):
-                return None
+                # Exclude the fixed base link
+                joint_angles = raw_angles[1:]
                 
-            return joint_angles
+                # Check hardware limits
+                if not self.validate_constraints(joint_angles):
+                    return None
+                    
+                return joint_angles
             
         except Exception as e:
             self.get_logger().error(f"IK computation failed: {e}")
             return None
             
     def plan_trajectory(self, target_angles):
-        """Task 4.4: Generate waypoints and validate the entire path."""
+        """Generate waypoints and validate the entire path."""
         num_waypoints = 10
         
-        # Use NumPy to mathematically slice the distance between 'current' and 'target' into 10 even steps
-        waypoints = np.linspace(self.current_joint_angles, target_angles, num=num_waypoints)
-        
-        valid_trajectory = []
-        for i, waypoint in enumerate(waypoints):
-            # Validate every single micro-step along the way
-            if self.validate_constraints(waypoint):
-                valid_trajectory.append(waypoint)
-            else:
-                self.get_logger().error(f"Trajectory blocked! Waypoint {i+1} hits a physical constraint.")
-                return None
-                
-        return valid_trajectory
+        # Measure Trajectory Planning Time
+        with self.perf_monitor.time_block('trajectory_planning'):
+            waypoints = np.linspace(self.current_joint_angles, target_angles, num=num_waypoints)
+            
+            valid_trajectory = []
+            for i, waypoint in enumerate(waypoints):
+                if self.validate_constraints(waypoint):
+                    valid_trajectory.append(waypoint)
+                else:
+                    self.get_logger().error(f"Trajectory blocked! Waypoint {i+1} hits a physical constraint.")
+                    return None
+                    
+            return valid_trajectory
 
     def pose_callback(self, msg):
         target_position = [msg.position.x, msg.position.y, msg.position.z]
         target_angles = self.solve_ik(target_position)
         
         if target_angles is not None:
-            # Check if the robot is already at the target to prevent spamming trajectory calculations
             if np.allclose(self.current_joint_angles, target_angles, atol=0.01):
                 return
                 
-            # --- TASK 4.4 ADDITIONS: Plan path before publishing ---
             trajectory = self.plan_trajectory(target_angles)
             
             if trajectory is not None:
                 self.get_logger().info(f"Planned safe trajectory with {len(trajectory)} waypoints.")
                 
-                # In a full simulation, we would publish the waypoints one by one on a timer.
-                # For this integration test, we publish the final target and update our internal state.
                 msg_out = Float32MultiArray()
                 msg_out.data = [float(a) for a in target_angles]
                 self.joint_publisher.publish(msg_out)
                 
-                # Update the robot's current position to the new target
                 self.current_joint_angles = target_angles
                 
                 angles_deg = [round(np.degrees(a), 1) for a in target_angles]
@@ -135,7 +143,6 @@ class InverseKinematicsSolver(Node):
 def main(args=None):
     rclpy.init(args=args)
     ik_solver = InverseKinematicsSolver()
-    
     try:
         rclpy.spin(ik_solver)
     except KeyboardInterrupt:

@@ -50,7 +50,9 @@ class VisionServoController(Node):
             corners, ids, rejected = detector.detectMarkers(cv_image)
         else:
             # Older OpenCV 4.5 syntax (Used by Ubuntu 22.04/Apt)
-            corners, ids, rejected = cv2.aruco.detectMarkers(cv_image, self.aruco_dict, parameters=self.aruco_params)        height, width, _ = cv_image.shape
+            corners, ids, rejected = cv2.aruco.detectMarkers(cv_image, self.aruco_dict, parameters=self.aruco_params)        
+        
+        height, width, _ = cv_image.shape
         
         desired_x = width / 2.0
         desired_y = height / 2.0

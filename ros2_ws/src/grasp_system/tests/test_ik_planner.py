@@ -6,7 +6,7 @@ import os
 
 # Ensure Python can find your 'src' module
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from src.ik_planner import InverseKinematicsSolver
+from grasp_system.ik_planner import InverseKinematicsSolver
 
 @pytest.fixture(scope="module")
 def ros_init():

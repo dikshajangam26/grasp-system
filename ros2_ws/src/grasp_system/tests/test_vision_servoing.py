@@ -9,7 +9,7 @@ import os
 
 # Ensure Python can find your 'src' module
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from src.vision_servoing import VisionServoController
+from grasp_system.vision_servoing import VisionServoController
 
 @pytest.fixture(scope="module")
 def ros_init():

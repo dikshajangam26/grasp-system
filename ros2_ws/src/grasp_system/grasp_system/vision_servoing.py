@@ -17,8 +17,11 @@ class VisionServoController(Node):
         
         self.bridge = CvBridge()
         self.aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
-        self.aruco_params = cv2.aruco.DetectorParameters_create()        
-        
+        try:
+            self.aruco_params = cv2.aruco.DetectorParameters()
+        except AttributeError:
+            self.aruco_params = cv2.aruco.DetectorParameters_create()
+
         self.error_history_x = []
         self.error_history_y = []
         self.history_length = 5

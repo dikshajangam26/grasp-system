@@ -1,0 +1,10 @@
+echo '<?xml version="1.0"?>
+<package format="3">
+  <name>grasp_system</name>
+  <version>0.1.0</version>
+  <description>Robot Grasping System</description>
+  <maintainer email="diksha@todo.todo">diksha</maintainer>
+  <license>Apache-2.0</license>
+  <buildtool_depend>ament_python</buildtool_depend>
+  <exec_depend>rclpy</exec_depend>
+</package>' > /ros2_ws/src/grasp_system/package.xml

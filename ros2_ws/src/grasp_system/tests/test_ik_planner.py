@@ -8,13 +8,6 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from grasp_system.ik_planner import InverseKinematicsSolver
 
-@pytest.fixture(scope="module")
-def ros_init():
-    """Initializes and shuts down ROS 2 for the test session."""
-    rclpy.init()
-    yield
-    rclpy.shutdown()
-
 @pytest.fixture
 def node(ros_init):
     """Creates a fresh IK node for each test."""

@@ -9,12 +9,12 @@ graph TD
     classDef hardware fill:#e1f5fe,stroke:#01579b,stroke-width:2px
     classDef software fill:#ffffff,stroke:#333333,stroke-width:2px,rx:5,ry:5
 
-    %% Nodes - Note the double quotes around text with HTML!
+    %% Nodes - HTML removed for GitHub compatibility
     Cam(("Camera Input")):::hardware
-    Vision["Vision-Based Servoing<br/><i>(Real-time tracking)</i>"]:::software
-    Predictor["Grasp Quality Predictor<br/><i>(ML inference)</i>"]:::software
-    IK["IK Solver & Planner<br/><i>(Motion planning)</i>"]:::software
-    ArmCtrl["Arm Control Interface<br/><i>(Joint commands)</i>"]:::software
+    Vision["Vision-Based Servoing (Real-time tracking)"]:::software
+    Predictor["Grasp Quality Predictor (ML inference)"]:::software
+    IK["IK Solver & Planner (Motion planning)"]:::software
+    ArmCtrl["Arm Control Interface (Joint commands)"]:::software
     Robot(("Robotic Arm")):::hardware
 
     %% Edges
@@ -33,7 +33,7 @@ graph TD
 ## This mindmap visually represents how the Master Controller orchestrates the sub-modules and their respective libraries.
 ```mermaid
 mindmap
-  root(("grasp_controller.py<br/>(Orchestrator)"))
+  root(("grasp_controller.py (Orchestrator)"))
     vision_servoing
       opencv("opencv (ArUco detection)")
       numpy("numpy (math)")
@@ -67,5 +67,4 @@ graph LR
     Vision -- "/servo/velocity" --> Pred
     Pred -- "/grasp/quality_score" --> IK
     IK -- "/arm/trajectory_goal" --> Arm
-
 ```

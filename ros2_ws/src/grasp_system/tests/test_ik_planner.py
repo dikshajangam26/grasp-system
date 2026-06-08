@@ -18,7 +18,7 @@ def node(ros_init):
 def test_ik_solution_within_joint_limits(node):
     """Test: IK solution within joint limits"""
     # A known safe coordinate directly in front of the robot
-    safe_target = [0.32, 0.24, 0.5] 
+    safe_target = [0.32, 0.24, 0.5, 0.0, 3.14, 0.0] 
     
     joint_angles = node.solve_ik(safe_target)
     

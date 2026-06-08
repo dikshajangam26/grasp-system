@@ -1,0 +1,62 @@
+# Autonomous Grasp System Configuration
+
+# Vision Servoing Parameters
+vision_servo:
+  aruco_dict_id: "DICT_6X6_250"
+  marker_size: 0.05  # 5cm marker
+  
+  # Control gains
+  control_gains:
+    Kp_x: 0.01
+    Kp_y: 0.01
+    Kp_z: 0.005
+    
+  # Velocity limits
+  velocity_limits:
+    max_linear: 0.3  # m/s
+    max_angular: 0.5  # rad/s
+    
+  # Stability parameters
+  detection_confidence: 0.8
+  median_filter_window: 5
+
+# Grasp Quality Predictor Parameters
+grasp_predictor:
+  model_path: "models/grasp_quality_model.h5"
+  input_size: [224, 224, 3]
+  quality_threshold: 0.7  # Only attempt grasps > 70% confidence
+  inference_device: "cpu"  # "cpu" or "cuda"
+  batch_size: 1
+
+# IK Solver Parameters
+ik_solver:
+  robot_model: "ur10"  # "ur10", "franka_panda", etc.
+  dh_parameters_file: "config/ur10_dh.yaml"
+  
+  # Joint limits (radians)
+  joint_limits:
+    q_min: [-3.14, -3.14, -3.14, -3.14, -3.14, -3.14]
+    q_max: [3.14, 3.14, 3.14, 3.14, 3.14, 3.14]
+    
+  # IK solver settings
+  max_iterations: 100
+  tolerance: 1e-6
+  singularity_threshold: 0.01
+
+# Motion Planning Parameters
+motion_planning:
+  trajectory_waypoints: 10
+  interpolation_method: "linear"  # "linear" or "cubic"
+  time_per_segment: 0.1  # seconds
+  
+# Performance & Monitoring
+performance:
+  enable_benchmarking: true
+  log_level: "DEBUG"  # "DEBUG", "INFO", "WARN", "ERROR"
+  performance_log_file: "logs/performance.log"
+
+# ROS 2 Parameters
+ros:
+  domain_id: 0
+  node_namespace: "/grasp_system"
+  queue_size: 10

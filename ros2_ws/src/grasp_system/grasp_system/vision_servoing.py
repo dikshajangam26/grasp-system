@@ -8,6 +8,7 @@ import cv2
 import numpy as np
 from cv_bridge import CvBridge
 from grasp_system.performance_metrics import PerformanceMonitor
+import os
 
 class VisionServoController(Node):
     def __init__(self):
@@ -64,7 +65,6 @@ class VisionServoController(Node):
         else:
             cv2.putText(annotated_image, "No Marker Found", (20, 40), 
                         cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-        debug_image_msg = self.bridge.cv2_to_imgmsg(annotated_image, "bgr8")
         self.get_logger().debug("Processed image for debugging purposes.")
 
         if os.environ.get('DISPLAY'):

@@ -64,10 +64,16 @@ class VisionServoController(Node):
         else:
             cv2.putText(annotated_image, "No Marker Found", (20, 40), 
                         cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-        
-        cv2.imshow('Vision Debug View', annotated_image)
-        cv2.waitKey(1)
-        
+        debug_image_msg = self.bridge.cv2_to_imgmsg(annotated_image, "bgr8")
+        self.get_logger().debug("Processed image for debugging purposes.")
+
+        if os.environ.get('DISPLAY'):
+            cv2.imshow('Vision Debug View', annotated_image)
+            cv2.waitKey(1)
+        else:
+            # Optional: Log that we are skipping the display
+            pass
+  
         # 3. Control Logic
         height, width, _ = cv_image.shape
         desired_x = width / 2.0

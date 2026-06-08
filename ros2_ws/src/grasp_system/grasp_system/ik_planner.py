@@ -54,6 +54,9 @@ class InverseKinematicsSolver(Node):
         return True
 
     def solve_ik(self, target_pose_input):
+
+        if target_pose_input is None:
+            return None
         """
         Solves Inverse Kinematics for a given target pose.
         target_pose_input: Can be a 3-element [x, y, z] or 6-element [x, y, z, roll, pitch, yaw] list/array.

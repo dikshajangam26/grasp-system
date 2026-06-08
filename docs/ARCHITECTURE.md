@@ -1,16 +1,21 @@
+# System Architecture
+
+## Data Flow Diagram
+This flowchart captures the hybrid architecture, showing how the Vision node splits its outputs between direct velocity commands and the machine learning pipeline.
+
 ```mermaid
 graph TD
     %% Styling
     classDef hardware fill:#e1f5fe,stroke:#01579b,stroke-width:2px
     classDef software fill:#ffffff,stroke:#333333,stroke-width:2px,rx:5,ry:5
 
-    %% Nodes
-    Cam((Camera Input)):::hardware
-    Vision[Vision-Based Servoing<br/><i>(Real-time tracking)</i>]:::software
-    Predictor[Grasp Quality Predictor<br/><i>(ML inference)</i>]:::software
-    IK[IK Solver & Planner<br/><i>(Motion planning)</i>]:::software
-    ArmCtrl[Arm Control Interface<br/><i>(Joint commands)</i>]:::software
-    Robot((Robotic Arm)):::hardware
+    %% Nodes - Note the double quotes around text with HTML!
+    Cam(("Camera Input")):::hardware
+    Vision["Vision-Based Servoing<br/><i>(Real-time tracking)</i>"]:::software
+    Predictor["Grasp Quality Predictor<br/><i>(ML inference)</i>"]:::software
+    IK["IK Solver & Planner<br/><i>(Motion planning)</i>"]:::software
+    ArmCtrl["Arm Control Interface<br/><i>(Joint commands)</i>"]:::software
+    Robot(("Robotic Arm")):::hardware
 
     %% Edges
     Cam --> Vision
@@ -23,34 +28,27 @@ graph TD
     IK -- "Joint Trajectory" --> ArmCtrl
     
     ArmCtrl --> Robot
-
----
-
-### 2. Module Dependencies
-Instead of a simple text tree, this mindmap visually represents how your Master Controller orchestrates the sub-modules and their respective libraries.
-
-```markdown
+```
+# Module Dependencies
+## This mindmap visually represents how the Master Controller orchestrates the sub-modules and their respective libraries.
 ```mermaid
 mindmap
-  root((grasp_controller.py<br/><i>Orchestrator</i>))
-    vision_servoing.py
-      opencv <i>ArUco detection</i>
-      numpy <i>math</i>
-    grasp_predictor.py
-      tensorflow / torch <i>ML inference</i>
-      sklearn <i>preprocessing</i>
-    ik_planner.py
-      ikpy <i>kinematics</i>
-      numpy <i>trajectory planning</i>
-    performance_metrics.py
-      time <i>benchmarking</i>
+  root(("grasp_controller.py<br/>(Orchestrator)"))
+    vision_servoing
+      opencv("opencv (ArUco detection)")
+      numpy("numpy (math)")
+    grasp_predictor
+      ml("tensorflow/torch (ML inference)")
+      sklearn("sklearn (preprocessing)")
+    ik_planner
+      ikpy("ikpy (kinematics)")
+      numpy_ik("numpy (trajectory planning)")
+    performance_metrics
+      time("time (benchmarking)")
+```
 
----
-
-### 3. ROS 2 Node Graph
-This represents the ROS 2 pub/sub network. I've designed it to flow horizontally, which is typical for pipeline processing graphs in robotics.
-
-```markdown
+# ROS 2 Node Graph
+## This represents the ROS 2 pub/sub network flowing horizontally.
 ```mermaid
 graph LR
     %% Styling
@@ -69,3 +67,5 @@ graph LR
     Vision -- "/servo/velocity" --> Pred
     Pred -- "/grasp/quality_score" --> IK
     IK -- "/arm/trajectory_goal" --> Arm
+
+```
